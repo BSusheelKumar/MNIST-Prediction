@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNIST Image Prediction</
+    <style>
+        body {
+            background-color: black;
+            color: white;
+        }
+
+        canvas {
+            border: 1px solid white;
+        }
+    </style>
+</head>
+<body>
+    <h1>MNIST Image Prediction</h1>
+    <canvas id="canvas" width="280" height="280"></canvas>
+    <br>
+    <button onclick="predict()">Predict</button>
+    <button onclick="clearCanvas()">Clear</button>
+    <br>
+    <div id="imageContainer" style="display:none;">
+        <img id="result" alt="Drawn Image">
+    </div>
+    <div id="predictionResult"></div>
+    <div id="transformedImageContainer" style="display:none;"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        let isDrawing = false;
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            draw(e);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+
+            context.lineWidth = 15;
+            context.lineCap = 'round';
+            context.strokeStyle = 'white';
+
+            context.lineTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
+            context.stroke();
+            context.beginPath();
+            context.moveTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+            context.beginPath();
+        }
+
+        function predict() {
+            const imageData = canvas.toDataURL();
+
+            // Send the image data to the server for prediction
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ imageData }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                const predictionElement = document.getElementById('predictionResult');
+                predictionElement.textContent = `Prediction: ${data.prediction}`;
+                
+                const resultElement = document.getElementById('result');
+                resultElement.src = imageData;
+                resultElement.alt = 'Drawn Image';
+                resultElement.style.display = 'block';
+                
+                const transformedImageContainer = document.getElementById('transformedImageContainer');
+                transformedImageContainer.innerHTML = `<img src="data:image/png;base64,${data.transformedImage}" alt="Transformed Image">`;
+                transformedImageContainer.style.display = 'block';
+
+                document.getElementById('imageContainer').style.display = 'block';
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function clearCanvas() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            const resultElement = document.getElementById('result');
+            resultElement.style.display = 'none';
+            document.getElementById('imageContainer').style.display = 'none';
+            document.getElementById('predictionResult').textContent = '';
+            document.getElementById('transformedImageContainer').style.display = 'none';
+        }
+
+
+    </script>
+</body>
+</html>
